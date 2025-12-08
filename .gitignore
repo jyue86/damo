@@ -1,3 +1,121 @@
-*.pkl
-*.npz
+# -------------------------------
+# OS-specific
+# -------------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------------
+# Python
+# -------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.so
+*.dll
+*.log
+*.out
+*.tmp
+*.bak
+*.swp
+*.swo
+*.orig
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.mypy_cache/
+.pytest_cache/
+coverage/
+htmlcov/
+.cache/
+.ipynb_checkpoints/
+
+# -------------------------------
+# Jupyter notebooks
+# -------------------------------
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# -------------------------------
+# Torch / Deep Learning
+# -------------------------------
 *.pt
+*.pth
+*.ckpt
+*.onnx
+*.bin
+*.npz
+*.npy
+*.log
+*.tensorboard/
+runs/
+lightning_logs/
+wandb/
+mlruns/
+
+# -------------------------------
+# PyCharm
+# -------------------------------
+.idea/
+*.iml
+
+# -------------------------------
+# VSCode
+# -------------------------------
+.vscode/
+.history/
+.code-workspace
+
+# -------------------------------
+# Build / Distribution
+# -------------------------------
+build/
+dist/
+*.egg-info/
+*.spec
+
+# -------------------------------
+# Data / Results / Experiments
+# -------------------------------
+data/
+outputs/
+logs/
+tmp/
+*.csv
+*.tsv
+*.jsonl
+
+# -------------------------------
+# Configs and credentials
+# -------------------------------
+*.env
+*.yml
+*.ini
+*.cfg
+*.json
+
+# -------------------------------
+# System / Misc
+# -------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# -------------------------------
+# JetBrains / Cache
+# -------------------------------
+.idea/
+.gradle/
+out/
+cmake-build-*/
+
+# -------------------------------
+# Others
+# -------------------------------
+nohup.out
