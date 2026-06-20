@@ -1,7 +1,30 @@
 [project]
 name = "damo"
 version = "1.0.0"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "hydra-core",
+    "line-profiler",
+    "numpy",
+    "omegaconf",
+    "open3d",
+    "pandas",
+    "scipy",
+    "smplx",
+    "torch",
+    "tqdm",
+    "trimesh",
+    "wandb",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]

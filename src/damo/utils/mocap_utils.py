@@ -1,8 +1,138 @@
+from pathlib import Path
+from typing import List, Optional
+
 import numpy as np
+import pandas as pd
 import torch
-from typing import Optional
+from scipy.spatial.transform import Rotation as R
+from tqdm import tqdm
 
 from .ensure_types import ensure_numpy, ensure_torch
+
+
+def clean_mocap_data(data_fpath: str, frames: List[str], output_fpath: str):
+    """
+    Cleans the mocap data. Expects all of the frames to be present in the data in the same order.
+
+    Args:
+        data_fpath (str): Path to the CSV file containing the mocap data.
+        frames (List[str]): List of frame names to be used in the cleaned data.
+        output_fpath (str): Path to save the cleaned data.
+    Returns:
+        None
+    """
+    first_row = "Frame,Time (Seconds)"
+    first_row_format = "{}:RotationX,{}:RotationY,{}:RotationZ,{}:RotationW,{}:PositionX,{}:PositionY,{}:PositionZ"
+    first_row_format = first_row_format.split(",")
+    final_data = []
+
+    with open(data_fpath) as f:
+        for i, line in enumerate(f.readlines()):
+            if i == 3:
+                first_row_frames = [""] * 7 * len(frames)
+                columns = line.split(",")
+                for frame in frames:
+                    column_index = columns.index(frame)
+                    for j in range(7):
+                        first_row_frames[column_index - 2 + j] = first_row_format[j].format(frame)
+                first_row += "," + ",".join(first_row_frames)
+            elif i > 7:
+                final_data.append(line)
+
+    with open(output_fpath, "w") as f:
+        f.write(first_row + "\n")
+        for line in final_data:
+            f.write(line)
+
+
+def parse_mocap_data(data_fpath: str, frame1: str, frame2: str, output_fpath: str):
+    """
+    Parses the mocap data for specific frames and saves the cleaned data to a new file.
+
+    Args:
+        data_fpath (str): Path to the CSV file containing the mocap data.
+        frame1 (str): Name of the first frame.
+        frame2 (str): Name of the second frame.
+        output_fpath (str): Path to save the cleaned data.
+    Returns:
+        None
+    """
+    first_row = "Frame,Time (seconds),"
+    first_row_format = "{}:RotationX,{}:RotationY,{}:RotationZ,{}:RotationW,{}:PositionX,{}:PositionY,{}:PositionZ"
+    frame1_idx = 0
+    frame2_idx = 0
+    final_data = []
+
+    with open(data_fpath) as f:
+        for i, line in enumerate(f.readlines()):
+            if i == 3:
+                line = line.split(",")
+                frame1_idx = line.index(frame1)
+                frame2_idx = line.index(frame2)
+
+                first_row += (
+                    first_row_format.format(*([frame1] * 7))
+                    + ","
+                    + first_row_format.format(*([frame2] * 7))
+                )
+            elif i > 7:
+                line_data = line.split(",")
+                frame = line_data[0]
+                time = line_data[1]
+                frame1_data = [i for i in line_data[frame1_idx: frame1_idx + 7]]
+                if frame1_data[-1].endswith("\n"):
+                    frame1_data[-1] = frame1_data[-1][:-1]
+                frame2_data = [i for i in line_data[frame2_idx: frame2_idx + 7]]
+                final_data.append([frame, time] + frame1_data + frame2_data)
+
+    with open(output_fpath, "w") as f:
+        f.write(first_row + "\n")
+        for line in final_data:
+            f.write(",".join(line))
+            if not line[-1].endswith("\n"):
+                f.write("\n")
+
+
+def extract_transform_from_df(data: pd.DataFrame, frame: str, row: int) -> np.ndarray:
+    """
+    Extracts the transformation matrix for a given frame from the DataFrame.
+
+    Args:
+        data (pd.DataFrame): DataFrame containing the mocap data.
+        frame (str): Name of the frame to extract the transformation for.
+        row (int): Row index to extract the transformation from.
+    Returns:
+        np.ndarray: 4x4 transformation matrix for the specified frame.
+    """
+    frame1_t = (data[[f"{frame}:PositionX", f"{frame}:PositionY", f"{frame}:PositionZ"]]).iloc[row].astype(float).to_numpy()
+    frame1_quat = (data[[f"{frame}:RotationX", f"{frame}:RotationY", f"{frame}:RotationZ", f"{frame}:RotationW"]]).iloc[row].astype(float).to_numpy()
+    frame1_R = R.from_quat(frame1_quat).as_matrix()
+    T = np.eye(4)
+    T[:3, :3] = frame1_R
+    T[:3, 3] = frame1_t
+    return T
+
+
+def main():
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--data", "-d", type=str, help="Path to the CSV file or directory containing the pose data"
+    )
+    parser.add_argument("--frames", "-f", type=str, nargs="+", help="Frames to be used (space separated list)")
+    parser.add_argument("--output", "-o", type=str, help="Path to the output CSV file or directory")
+    args = parser.parse_args()
+
+    if Path(args.data).is_file():
+        clean_mocap_data(args.data, args.frames, args.output)
+    else:
+        assert Path(args.output).exists() and Path(args.output).is_dir()
+        mocap_files = list(Path(args.data).glob("*.csv"))
+
+        for mocap_data in tqdm(mocap_files):
+            clean_mocap_data(
+                mocap_data, args.frames, Path(args.output) / mocap_data.name
+            )
 
 def topk_weight_joints(weights, markers_mask=None, k=3, normalize=True):
     """

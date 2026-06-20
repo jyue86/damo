@@ -141,7 +141,7 @@ class Trainer:
             self.global_step += 1
             if self.global_step % self.log_interval == 0:
                 self._log_loss(outs["loss"], epoch, is_training=True)
-                log.info(f"[E{epoch:03d} S{self.global_step}] loss={outs["loss"]["total"].item():.4f}")
+                log.info(f"[E{epoch:03d} S{self.global_step}] loss={outs['loss']['total'].item():.4f}")
 
             if sample is None:
                 sample = {
@@ -223,4 +223,3 @@ class Trainer:
                     utils.save_ckpt(self.model, step=self.global_step, path="ckpt_best.pt")
 
             utils.save_ckpt(self.model, step=self.global_step, path="ckpt_last.pt")
-
