@@ -18,9 +18,10 @@ set -euo pipefail
 
 REPO_DIR="${SLURM_SUBMIT_DIR:-$(pwd)}"
 SIF="${REPO_DIR}/dune1.sif"
-AMASS_HOST="/mnt/bcc-data"
+AMASS_HOST="/data/HangQiu"
 
 mkdir -p "${REPO_DIR}/logs" "${REPO_DIR}/outputs"
+cd "${REPO_DIR}"
 
 if [[ ! -f "${SIF}" ]]; then
   echo "Missing Apptainer image: ${SIF}" >&2
@@ -34,14 +35,21 @@ echo "sif=${SIF}"
 echo "amass_mount=${AMASS_HOST}:/mnt/bcc-data"
 
 apptainer exec --nv \
-  --bind "${REPO_DIR}:/workspace" \
+  --bind "${REPO_DIR}:${REPO_DIR}" \
   --bind "${AMASS_HOST}:/mnt/bcc-data" \
-  --pwd /workspace \
+  --env "PYTHONPATH=${REPO_DIR}/src:/workspace/src" \
+  --env HYDRA_FULL_ERROR=1 \
+  --pwd "${REPO_DIR}" \
   "${SIF}" \
   python scripts/train.py \
+    out_dir="${REPO_DIR}/outputs" \
+    dataset.amass_root=/mnt/bcc-data/proj/ego-exo-collect/amass \
     dataset.dataset.dataset_names.train='[ACCAD,HumanEva,DFaust,BMLmovi]' \
     dataset.dataset.dataset_names.val='[ACCAD,HumanEva,DFaust,BMLmovi]' \
-    dataset.dataset.data_type_probs='{real: 1.0}' \
+    dataset.dataset.data_type_probs.syn_arb=0.0 \
+    dataset.dataset.data_type_probs.syn_sup=0.0 \
+    dataset.dataset.data_type_probs.real=1.0 \
     dataset.dataloader.batch_size=128 \
     dataset.dataloader.num_workers=4 \
+    trainer.log_interval=1 \
     trainer.amp=true

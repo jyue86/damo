@@ -6,6 +6,7 @@ import numpy as np
 import pickle
 import math
 import random
+from pathlib import Path
 from omegaconf import OmegaConf
 from functools import lru_cache
 
@@ -26,9 +27,11 @@ class AmassDataset(Dataset):
                   "markers_obs", "markers_sim", "labels_obs"],
     }
 
-    def __init__(self, cfg, train=True):
+    def __init__(self, cfg, train=True, amass_root=None):
         super().__init__()
-        base_data_path = utils.Paths.amass_data / cfg["data_dir_name"].lower()
+        base_data_root = Path(amass_root).expanduser() if amass_root else utils.Paths.amass_data
+        base_data_path = base_data_root / cfg["data_dir_name"].lower()
+        self.base_data_path = base_data_path
 
         self.file_paths = [
             p
@@ -363,7 +366,18 @@ def make_dataloader(cfg: dict, train: bool = False):
     ds = AmassDataset(
         cfg["dataset"],
         train=train,
+        amass_root=cfg.get("amass_root"),
     )
+
+    if len(ds) == 0:
+        split = "train" if train else "val"
+        dataset_names = cfg["dataset"]["dataset_names"][split]
+        raise ValueError(
+            "AMASS dataset produced zero samples after indexing. "
+            f"split={split}, root={ds.base_data_path}, datasets={dataset_names}, "
+            f"pattern=*{cfg['dataset']['filename_pattern']}*.npz, "
+            f"genders={cfg['dataset']['genders']}"
+        )
 
     loader_cfg = cfg["dataloader"]
     loader = DataLoader(

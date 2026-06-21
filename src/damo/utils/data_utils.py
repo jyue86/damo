@@ -68,14 +68,20 @@ def build_global_index(
         with np.load(fp, allow_pickle=True) as npz:
 
             if requires is not None:
+                skip_file = False
                 for k, v in requires.items():
                     if k not in npz:
-                        continue
+                        skip_file = True
+                        break
 
                     arr = npz[k]
                     d = arr.item() if arr.ndim == 0 else arr
                     if d not in v:
-                        continue
+                        skip_file = True
+                        break
+
+                if skip_file:
+                    continue
 
             t = npz[sequential_data_key].shape[0]
             si = int(t * max(ratio[0], 0))

@@ -1,5 +1,7 @@
 _convert_: all
 
+amass_root: null
+
 dataloader:
   batch_size: 128
   num_workers: 1
