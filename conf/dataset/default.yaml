@@ -17,11 +17,12 @@ dataset:
 
   data_dir_name: merged
   filename_pattern: merged
+  synthetic_body_source: amass_betas
+  synthetic_body_pool_dir: data/synthetic_bodies
 
   data_type_probs:
     syn_arb: 0.5
-    syn_sup: 0.25
-    real: 0.25
+    real: 0.5
 
   marker_sampler:
     distance_from_skin: 0.01

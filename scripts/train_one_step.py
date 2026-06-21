@@ -19,6 +19,16 @@ DATASET_NAMES = ["ACCAD", "HumanEva", "DFaust", "BMLmovi"]
 MAX_FILES_PER_DATASET = 1
 
 
+def _one_step_data_type_probs() -> dict[str, float]:
+    data_type = os.environ.get("DAMO_ONE_STEP_DATA_TYPE", "real")
+    if data_type not in {"real", "syn_arb"}:
+        raise ValueError(
+            "DAMO_ONE_STEP_DATA_TYPE must be one of: real, syn_arb "
+            f"(got {data_type!r})"
+        )
+    return {data_type: 1.0}
+
+
 def _existing_model_path(model_type: str, gender: str) -> Path | None:
     model_dir = utils.Paths.smpl_models / model_type.lower()
     stem = f"{model_type.upper()}_{gender.upper()}"
@@ -110,7 +120,7 @@ def _apply_sanity_overrides(cfg: DictConfig) -> None:
     cfg.dataset.dataset.filename_pattern = "merged"
     cfg.dataset.dataset.dataset_names.train = DATASET_NAMES
     cfg.dataset.dataset.dataset_names.val = DATASET_NAMES
-    cfg.dataset.dataset.data_type_probs = {"real": 1.0}
+    cfg.dataset.dataset.data_type_probs = _one_step_data_type_probs()
 
     cfg.trainer.amp = False
     cfg.trainer.log_interval = 1
@@ -218,7 +228,7 @@ def run(cfg: DictConfig) -> None:
     print(f"genders={wanted_genders}")
     print(f"file_counts={file_counts}")
     print(f"subset_files_per_dataset={MAX_FILES_PER_DATASET}")
-    print("data_type_probs={'real': 1.0}")
+    print(f"data_type_probs={dict(cfg.dataset.dataset.data_type_probs)}")
     print(
         "dataloader="
         f"batch_size={cfg.dataset.dataloader.batch_size},"
