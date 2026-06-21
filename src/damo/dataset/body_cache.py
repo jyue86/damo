@@ -1,25 +1,44 @@
 import torch
 import numpy as np
 import random
+from pathlib import Path
 from typing import Dict, Any, List, Callable
 
 import damo.utils as utils
 from damo.smpl.body_model import create_smpl_model
 
 class BodyCache:
-    def __init__(self, genders, capacity):
+    def __init__(
+        self,
+        genders,
+        capacity,
+        synthetic_body_source="caesar_cache",
+        synthetic_body_pool_dir=None,
+    ):
         self.genders = genders
         self.capacity = capacity
+        self.synthetic_body_source = synthetic_body_source
+        self.synthetic_body_pool_dir = self._resolve_pool_dir(synthetic_body_pool_dir)
         self.dtype = torch.float32
         self.device = utils.get_device(use_cuda=False)
 
         self.models = {}
         self.caesar = {}
+        self.amass_betas = {}
         self.lbs_weights = {}
         self.topk_weight_jids = {}
 
         self._cache: Dict[int, Any] = {}
         self._order: List[int] = []
+
+    def _resolve_pool_dir(self, synthetic_body_pool_dir):
+        if synthetic_body_pool_dir is None:
+            return utils.Paths.data / "synthetic_bodies"
+
+        path = Path(synthetic_body_pool_dir)
+        if path.is_absolute():
+            return path
+        return utils.Paths.root / path
 
     def get_smpl_model(self, body_type, gender):
         model_key = f"{body_type}_{gender}"
@@ -83,6 +102,30 @@ class BodyCache:
         body = self.get_caesar_body(gender, body_idx, to_torch=to_torch)
 
         return body, gender
+
+    def get_amass_beta_pool(self, gender):
+        if gender not in self.amass_betas:
+            path = self.synthetic_body_pool_dir / f"amass_smplh_betas_{gender}.npz"
+            self.amass_betas[gender] = utils.io_utils.load_npz_to_dict(path)
+
+        return self.amass_betas[gender]
+
+    def get_random_amass_beta_body(self, genders: List[str], to_torch=False):
+        gender = random.choice(genders)
+        pool = self.get_amass_beta_pool(gender)
+        betas = pool["betas"]
+        num_bodies = betas.shape[0]
+        body_idx = np.random.randint(0, num_bodies)
+
+        body = self.get_smpl_body("smplh", gender, betas[body_idx], to_torch=to_torch)
+        return body, gender
+
+    def get_random_synthetic_body(self, genders: List[str], to_torch=False):
+        if self.synthetic_body_source == "amass_betas":
+            return self.get_random_amass_beta_body(genders, to_torch=to_torch)
+        if self.synthetic_body_source == "caesar_cache":
+            return self.get_random_caesar_body(genders, to_torch=to_torch)
+        raise ValueError(f"Unknown synthetic_body_source: {self.synthetic_body_source}")
 
 
     def get_caesar_body(self, gender, idx, to_torch=False):

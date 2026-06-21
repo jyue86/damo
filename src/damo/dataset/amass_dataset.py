@@ -81,7 +81,12 @@ class AmassDataset(Dataset):
             requires={"smplx_gender": self.genders},
         )
 
-        self._body_cache = BodyCache(genders=self.genders, capacity=self.cache_capacity)
+        self._body_cache = BodyCache(
+            genders=self.genders,
+            capacity=self.cache_capacity,
+            synthetic_body_source=cfg.get("synthetic_body_source", "caesar_cache"),
+            synthetic_body_pool_dir=cfg.get("synthetic_body_pool_dir", None),
+        )
 
     def __len__(self):
         return len(self._global_index)
@@ -117,9 +122,9 @@ class AmassDataset(Dataset):
         trans = get_data("trans")[ssi:sei]  # [S, 3] (S = sei-ssi)
         poses = get_data("poses")[ssi:sei, :pose_dim]  # [S, 66]
 
-        caesar_body, gender = self._body_cache.get_random_caesar_body(self.genders, to_torch=False)
-        v_shaped = caesar_body["vertices"]  # [V, 3]
-        j_shaped = caesar_body["joints"]  # [J(22), 3]
+        synthetic_body, gender = self._body_cache.get_random_synthetic_body(self.genders, to_torch=False)
+        v_shaped = synthetic_body["vertices"]  # [V, 3]
+        j_shaped = synthetic_body["joints"][:22]  # [J(22), 3]
 
         full_weights = self._body_cache.get_weights(body_type, gender, j22=True, to_torch=False)  # [V, J(22)]
         full_rep_jids = self._body_cache.get_topk_weight_jids(body_type, gender, j22=True, k=3, to_torch=False)  # [V, J(3)]
