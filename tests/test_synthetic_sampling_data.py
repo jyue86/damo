@@ -31,6 +31,18 @@ assert _GEOM_SPEC.loader is not None
 sys.modules[_GEOM_SPEC.name] = marker_geom
 _GEOM_SPEC.loader.exec_module(marker_geom)
 
+_MARKERSETS_SCRIPT = (
+    Path(__file__).resolve().parents[1]
+    / "scripts"
+    / "prepare_data"
+    / "build_markersets.py"
+)
+_MARKERSETS_SPEC = importlib.util.spec_from_file_location("build_markersets", _MARKERSETS_SCRIPT)
+markersets = importlib.util.module_from_spec(_MARKERSETS_SPEC)
+assert _MARKERSETS_SPEC.loader is not None
+sys.modules[_MARKERSETS_SPEC.name] = markersets
+_MARKERSETS_SPEC.loader.exec_module(markersets)
+
 _TRAIN_ONE_STEP_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "train_one_step.py"
 _TRAIN_ONE_STEP_SPEC = importlib.util.spec_from_file_location("train_one_step", _TRAIN_ONE_STEP_SCRIPT)
 train_one_step = importlib.util.module_from_spec(_TRAIN_ONE_STEP_SPEC)
@@ -152,3 +164,62 @@ def test_train_one_step_data_type_override_supports_syn_arb(monkeypatch):
     monkeypatch.setenv("DAMO_ONE_STEP_DATA_TYPE", "syn_arb")
 
     assert train_one_step._one_step_data_type_probs() == {"syn_arb": 1.0}
+
+
+def test_train_one_step_data_type_override_supports_syn_sup(monkeypatch):
+    monkeypatch.setenv("DAMO_ONE_STEP_DATA_TYPE", "syn_sup")
+
+    assert train_one_step._one_step_data_type_probs() == {"syn_sup": 1.0}
+
+
+def test_build_superset_candidates_groups_slots_filters_and_falls_back():
+    marker_idx_set = np.array(
+        [
+            [0, 5, 8],
+            [1, 6, 9],
+            [0, 7, 10],
+        ],
+        dtype=np.int64,
+    )
+    candidate_vids = np.array([0, 1, 2, 5, 7], dtype=np.int64)
+    template_vertices = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0],
+            [4.0, 0.0, 0.0],
+            [5.0, 0.0, 0.0],
+            [6.0, 0.0, 0.0],
+            [7.0, 0.0, 0.0],
+            [8.0, 0.0, 0.0],
+            [9.0, 0.0, 0.0],
+            [10.0, 0.0, 0.0],
+        ],
+        dtype=np.float32,
+    )
+
+    cands = markersets.build_superset_candidates(marker_idx_set, candidate_vids, template_vertices)
+
+    assert len(cands) == 3
+    np.testing.assert_array_equal(cands[0], np.array([0, 1]))
+    np.testing.assert_array_equal(cands[1], np.array([5, 7]))
+    np.testing.assert_array_equal(cands[2], np.array([7]))
+
+
+def test_save_markersets_writes_loader_expected_schema(tmp_path):
+    marker_idx_set = np.array([[0, 1], [2, 3]], dtype=np.int64)
+    superset_cands = [
+        np.array([0, 2], dtype=np.int64),
+        np.array([1, 3], dtype=np.int64),
+    ]
+
+    out_path = markersets.save_markersets(marker_idx_set, superset_cands, tmp_path / "markersets.npz")
+
+    assert out_path == tmp_path / "markersets.npz"
+    with np.load(out_path, allow_pickle=True) as data:
+        assert set(data.files) == {"soma_superset_smplh_cands", "mocap_solver_smplh"}
+        assert data["mocap_solver_smplh"].shape == (2, 2)
+        loaded = data["soma_superset_smplh_cands"]
+        assert loaded.dtype == object
+        np.testing.assert_array_equal(loaded[0], np.array([0, 2]))
