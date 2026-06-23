@@ -21,9 +21,9 @@ MAX_FILES_PER_DATASET = 1
 
 def _one_step_data_type_probs() -> dict[str, float]:
     data_type = os.environ.get("DAMO_ONE_STEP_DATA_TYPE", "real")
-    if data_type not in {"real", "syn_arb"}:
+    if data_type not in {"real", "syn_arb", "syn_sup"}:
         raise ValueError(
-            "DAMO_ONE_STEP_DATA_TYPE must be one of: real, syn_arb "
+            "DAMO_ONE_STEP_DATA_TYPE must be one of: real, syn_arb, syn_sup "
             f"(got {data_type!r})"
         )
     return {data_type: 1.0}
