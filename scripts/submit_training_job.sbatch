@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1 # Allocate *at most* 1 task for job steps in the job
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --time=0-128:00:00
 #SBATCH --mail-user=jyue009@ucr.edu
 #SBATCH --mail-type=ALL
@@ -34,6 +34,8 @@ echo "repo_dir=${REPO_DIR}"
 echo "sif=${SIF}"
 echo "amass_mount=${AMASS_HOST}:/mnt/bcc-data"
 
+# Experiment config controls the train/val split, synthetic mix, validation branch,
+# batch size, AMP, and model size. Keep this launcher focused on cluster paths.
 apptainer exec --nv \
   --bind "${REPO_DIR}:${REPO_DIR}" \
   --bind "${AMASS_HOST}:/mnt/bcc-data" \
@@ -42,14 +44,6 @@ apptainer exec --nv \
   --pwd "${REPO_DIR}" \
   "${SIF}" \
   python scripts/train.py \
+    +experiment=mixed_train_real_val \
     out_dir="${REPO_DIR}/outputs" \
-    dataset.amass_root=/mnt/bcc-data/proj/ego-exo-collect/amass \
-    dataset.dataset.dataset_names.train='[ACCAD,HumanEva,DFaust,BMLmovi]' \
-    dataset.dataset.dataset_names.val='[ACCAD,HumanEva,DFaust,BMLmovi]' \
-    dataset.dataset.data_type_probs.syn_arb=0.0 \
-    dataset.dataset.data_type_probs.syn_sup=0.0 \
-    dataset.dataset.data_type_probs.real=1.0 \
-    dataset.dataloader.batch_size=128 \
-    dataset.dataloader.num_workers=4 \
-    trainer.log_interval=1 \
-    trainer.amp=true
+    dataset.amass_root=/mnt/bcc-data/proj/ego-exo-collect/amass

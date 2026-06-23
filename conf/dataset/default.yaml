@@ -21,8 +21,10 @@ dataset:
   synthetic_body_pool_dir: data/synthetic_bodies
 
   data_type_probs:
-    syn_arb: 0.5
+    syn_arb: 0.25
+    syn_sup: 0.25
     real: 0.5
+  val_data_type_probs: null
 
   marker_sampler:
     distance_from_skin: 0.01

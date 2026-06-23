@@ -47,6 +47,12 @@ class Trainer:
 
         self.best_val = float("inf")
 
+    @staticmethod
+    def _scalar_item(value):
+        if torch.is_tensor(value):
+            return value.detach().cpu().item()
+        return float(value)
+
     def _forward_loss(self, batch):
         in_data, gt_data = self._load_batch(batch)
 
@@ -102,21 +108,29 @@ class Trainer:
         category = "train" if is_training else "val"
 
         losses = {}
+        scalar_losses = {}
         for k, v in loss_dict.items():
             if k == "total":
                 continue
 
             log_key = f"{category}/loss/{k}"
-            if torch.is_tensor(v):
-                losses[log_key] = v.detach().cpu().item()
-            else:
-                losses[log_key] = float(v)
+            scalar = self._scalar_item(v)
+            scalar_losses[k] = scalar
+            losses[log_key] = scalar
 
         loss_log = {
-            f"{category}/loss/total": loss_dict["total"],
+            f"{category}/loss/total": self._scalar_item(loss_dict["total"]),
             **losses,
             "epoch": float(epoch)
         }
+
+        if "rep_offsets" in scalar_losses:
+            # The masked L1 sums over representative joints and xyz, so expose a per-coordinate scale.
+            n_rep_joints = getattr(self.model, "n_rep_joints", 3)
+            per_coord_m = scalar_losses["rep_offsets"] / float(n_rep_joints * 3)
+            loss_log[f"{category}/metric/rep_offsets_l1_per_coord_m"] = per_coord_m
+            loss_log[f"{category}/metric/rep_offsets_l1_per_coord_cm"] = per_coord_m * 100.0
+
         self.logger.log(loss_log, step=self.global_step)
 
     def train_epoch(self, epoch: int):

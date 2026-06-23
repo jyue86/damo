@@ -1,0 +1,39 @@
+# @package _global_
+
+model:
+  name: DamoMediumRealVal
+  marker_embedding:
+    d_hidden: 256
+  marker_attention:
+    d_model: 192
+    n_heads: 6
+    n_layers: 6
+    ffn:
+      d_hidden: 384
+  post_attention:
+    d_hidden: 512
+  rep_joint_predictor:
+    d_hidden: 512
+  rep_weight_predictor:
+    d_hidden: 512
+  rep_offset_predictor:
+    d_hidden: 512
+
+dataset:
+  dataloader:
+    batch_size: 512
+    num_workers: 4
+  dataset:
+    data_type_probs:
+      syn_arb: 0.25
+      syn_sup: 0.25
+      real: 0.5
+    val_data_type_probs:
+      real: 1.0
+    dataset_names:
+      train: [ACCAD, CMU, BMLmovi, DFaust, HumanEva]
+      val: [HDM05, SFU, SOMA]
+
+trainer:
+  log_interval: 1
+  amp: true

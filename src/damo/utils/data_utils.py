@@ -60,6 +60,7 @@ def build_global_index(
         sequential_data_key: str,
         ratio: Tuple[float, float],
         requires: Optional[Dict[str, List[Any]]] = None,
+        seq_len: Optional[int] = None,
 ) -> List[Tuple[int, int]]:
 
     index: List[Tuple[int, int]] = []
@@ -86,6 +87,12 @@ def build_global_index(
             t = npz[sequential_data_key].shape[0]
             si = int(t * max(ratio[0], 0))
             ei = int(t * min(ratio[1], 1))
+            if seq_len is not None:
+                if seq_len <= 0:
+                    raise ValueError(f"seq_len must be positive, got {seq_len}")
+                half = seq_len // 2
+                si = max(si, half)
+                ei = min(ei, t - half)
 
         for i in range(si, ei):
             index.append((fi, i))

@@ -1,0 +1,23 @@
+# @package _global_
+
+model:
+  name: DamoRealVal
+
+dataset:
+  dataloader:
+    batch_size: 512
+    num_workers: 4
+  dataset:
+    data_type_probs:
+      syn_arb: 0.25
+      syn_sup: 0.25
+      real: 0.5
+    val_data_type_probs:
+      real: 1.0
+    dataset_names:
+      train: [ACCAD, CMU, BMLmovi, DFaust, HumanEva]
+      val: [HDM05, SFU, SOMA]
+
+trainer:
+  log_interval: 1
+  amp: true

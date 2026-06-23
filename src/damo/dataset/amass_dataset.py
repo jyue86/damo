@@ -33,9 +33,10 @@ class AmassDataset(Dataset):
         base_data_path = base_data_root / cfg["data_dir_name"].lower()
         self.base_data_path = base_data_path
 
+        split = "train" if train else "val"
         self.file_paths = [
             p
-            for ds in cfg["dataset_names"]["train" if train else "val"]
+            for ds in cfg["dataset_names"][split]
             for p in (base_data_path / ds).rglob(f"*{cfg['filename_pattern']}*.npz")
             if p.is_file()
         ]
@@ -48,6 +49,8 @@ class AmassDataset(Dataset):
 
         # --- Data types ---
         dt_probs_cfg = cfg["data_type_probs"]
+        if split == "val" and cfg.get("val_data_type_probs", None) is not None:
+            dt_probs_cfg = cfg["val_data_type_probs"]
         self.data_types = list(dt_probs_cfg.keys())
         self.data_type_probs = np.array(
             [dt_probs_cfg[k] for k in self.data_types],
@@ -82,6 +85,7 @@ class AmassDataset(Dataset):
             sequential_data_key="smplx_trans",
             ratio=(0.1, 0.9),
             requires={"smplx_gender": self.genders},
+            seq_len=self.seq_len,
         )
 
         self._body_cache = BodyCache(
